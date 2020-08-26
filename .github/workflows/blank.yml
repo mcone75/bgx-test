@@ -1,0 +1,59 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:name: Release qlik-qv-export binaries
+
+# This workflow is triggered on pushes of tags.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+jobs:
+  release:
+    name: Build
+    runs-on:
+      windows-latest # For a list of available runner types, refer to
+      # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
+
+    env:
+      Solution_Name: qlik_qv_export.sln
+      #Test_Project_Path: your-test-project-path                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
+
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+
+      # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+      - name: Setup MSBuild.exe
+        uses: microsoft/setup-msbuild@2008f912f56e61277eefaac6d1888b750582aa16
+
+      # Restore the application to populate the obj folder with RuntimeIdentifiers
+      - name: Build application
+        run: |
+          mkdir bin\Release
+          echo "test" > bin\Release\test.txt
+
+      - uses: papeloto/action-zip@v1
+        with:
+          files: bin/Release/
+          dest: qlik-qv-export.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: qlik-qv-export.zip
+
